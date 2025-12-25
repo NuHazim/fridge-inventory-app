@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { Home, ShoppingCart, ChefHat, Settings } from 'lucide-react';
 import { FridgeScreen } from './components/FridgeScreen';
 import { GroceryScreen } from './components/GroceryScreen';
-import { RecipesScreen } from './components/RecipesScreen';
 import { SettingsScreen } from './components/SettingsScreen';
 import { ThemeProvider } from './components/ThemeProvider';
 import { AuthProvider, useAuth } from './components/AuthProvider';
@@ -10,26 +9,6 @@ import { LoginScreen } from './components/LoginScreen';
 import { SignUpScreen } from './components/SignUpScreen';
 
 type Screen = 'fridge' | 'grocery' | 'recipes' | 'settings';
-
-export interface FridgeItem {
-  id: string;
-  name: string;
-  category: string;
-  quantity: number;
-  unit: string;
-  expiryDate: string;
-  addedDate: string;
-  barcode?: string;
-}
-
-export interface GroceryItem {
-  id: string;
-  name: string;
-  quantity: number;
-  unit: string;
-  completed: boolean;
-  category: string;
-}
 
 function AppContent() {
   const { user, isLoading } = useAuth();
@@ -43,6 +22,7 @@ function AppContent() {
     );
   }
 
+  // Show auth screens if no user
   if (!user) {
     if (authScreen === 'login') {
       return <LoginScreen onSwitchToSignUp={() => setAuthScreen('signup')} />;
@@ -50,110 +30,33 @@ function AppContent() {
     return <SignUpScreen onSwitchToLogin={() => setAuthScreen('login')} />;
   }
 
+  // User is logged in - show main app
   return <MainApp />;
 }
 
 function MainApp() {
   const [currentScreen, setCurrentScreen] = useState<Screen>('fridge');
-  const [fridgeItems, setFridgeItems] = useState<FridgeItem[]>([]);
-
-  const [groceryItems, setGroceryItems] = useState<GroceryItem[]>([]);
-
-  const addToFridge = (item: Omit<FridgeItem, 'id' | 'addedDate'>) => {
-    const newItem: FridgeItem = {
-      ...item,
-      id: Date.now().toString(),
-      addedDate: new Date().toISOString().split('T')[0],
-    };
-    setFridgeItems([...fridgeItems, newItem]);
-  };
-
-  const removeFromFridge = (id: string) => {
-    setFridgeItems(fridgeItems.filter(item => item.id !== id));
-  };
-
-  const updateFridgeItem = (id: string, updates: Partial<FridgeItem>) => {
-    setFridgeItems(fridgeItems.map(item => 
-      item.id === id ? { ...item, ...updates } : item
-    ));
-  };
-
-  const addToGrocery = (item: Omit<GroceryItem, 'id' | 'completed'>) => {
-    const newItem: GroceryItem = {
-      ...item,
-      id: Date.now().toString(),
-      completed: false,
-    };
-    setGroceryItems([...groceryItems, newItem]);
-  };
-
-  const removeFromGrocery = (id: string) => {
-    setGroceryItems(groceryItems.filter(item => item.id !== id));
-  };
-
-  const toggleGroceryItem = (id: string) => {
-    setGroceryItems(groceryItems.map(item =>
-      item.id === id ? { ...item, completed: !item.completed } : item
-    ));
-  };
-
-  const completePurchase = () => {
-    const completedItems = groceryItems.filter(item => item.completed);
-    
-    completedItems.forEach(groceryItem => {
-      const fridgeItem: Omit<FridgeItem, 'id' | 'addedDate'> = {
-        name: groceryItem.name,
-        category: groceryItem.category,
-        quantity: groceryItem.quantity,
-        unit: groceryItem.unit,
-        expiryDate: getDefaultExpiryDate(groceryItem.category),
-        barcode: undefined,
-      };
-      addToFridge(fridgeItem);
-    });
-
-    setGroceryItems(groceryItems.filter(item => !item.completed));
-    setCurrentScreen('fridge');
-  };
-
-  const getDefaultExpiryDate = (category: string): string => {
-    const daysToAdd = {
-      'Dairy': 7,
-      'Meat': 3,
-      'Vegetables': 5,
-      'Fruits': 7,
-      'Bakery': 5,
-      'Beverages': 30,
-    }[category] || 7;
-
-    const date = new Date();
-    date.setDate(date.getDate() + daysToAdd);
-    return date.toISOString().split('T')[0];
-  };
 
   const renderScreen = () => {
     switch (currentScreen) {
       case 'fridge':
-        return (
-          <FridgeScreen
-            items={fridgeItems}
-            onAddItem={addToFridge}
-            onRemoveItem={removeFromFridge}
-            onUpdateItem={updateFridgeItem}
-          />
-        );
+        return <FridgeScreen />;
       case 'grocery':
-        return (
-          <GroceryScreen
-            items={groceryItems}
-            onAddItem={addToGrocery}
-            onRemoveItem={removeFromGrocery}
-            onToggleItem={toggleGroceryItem}
-            onCompletePurchase={completePurchase}
-          />
-        );
+        return <GroceryScreen />;
       case 'recipes':
-        return <RecipesScreen fridgeItems={fridgeItems} onUpdateFridgeItems={setFridgeItems} />;
+        return (
+          <div className="max-w-2xl mx-auto p-4 min-h-screen flex items-center justify-center">
+            <div className="text-center">
+              <ChefHat className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+                Recipes
+              </h2>
+              <p className="text-gray-600 dark:text-gray-400">
+                Coming soon! Find recipes based on your fridge items.
+              </p>
+            </div>
+          </div>
+        );
       case 'settings':
         return <SettingsScreen />;
       default:
@@ -170,7 +73,7 @@ function MainApp() {
         <div className="grid grid-cols-4 h-16">
           <button
             onClick={() => setCurrentScreen('fridge')}
-            className={`flex flex-col items-center justify-center gap-1 ${
+            className={`flex flex-col items-center justify-center gap-1 transition-colors ${
               currentScreen === 'fridge'
                 ? 'text-[#007057]'
                 : 'text-gray-500 dark:text-gray-400'
@@ -181,7 +84,7 @@ function MainApp() {
           </button>
           <button
             onClick={() => setCurrentScreen('grocery')}
-            className={`flex flex-col items-center justify-center gap-1 ${
+            className={`flex flex-col items-center justify-center gap-1 transition-colors ${
               currentScreen === 'grocery'
                 ? 'text-[#007057]'
                 : 'text-gray-500 dark:text-gray-400'
@@ -192,7 +95,7 @@ function MainApp() {
           </button>
           <button
             onClick={() => setCurrentScreen('recipes')}
-            className={`flex flex-col items-center justify-center gap-1 ${
+            className={`flex flex-col items-center justify-center gap-1 transition-colors ${
               currentScreen === 'recipes'
                 ? 'text-[#007057]'
                 : 'text-gray-500 dark:text-gray-400'
@@ -203,7 +106,7 @@ function MainApp() {
           </button>
           <button
             onClick={() => setCurrentScreen('settings')}
-            className={`flex flex-col items-center justify-center gap-1 ${
+            className={`flex flex-col items-center justify-center gap-1 transition-colors ${
               currentScreen === 'settings'
                 ? 'text-[#007057]'
                 : 'text-gray-500 dark:text-gray-400'

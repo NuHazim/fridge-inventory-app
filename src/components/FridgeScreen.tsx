@@ -1,66 +1,120 @@
-import { useState } from 'react';
-import { Plus, Search, Trash2, AlertCircle } from 'lucide-react';
-import { FridgeItem } from '../App';
+import { useState, useEffect } from 'react';
+import { Plus, Search, Trash2, AlertCircle, User } from 'lucide-react';
+import { useAuth } from './AuthProvider';
+import { logout } from '../services/auth.service';
+import { getUserItems, deleteUserItem } from '../services/userItems.service';
+import { UserItem } from '../models/UserItem.model';
 import { AddItemModal } from './AddItemModal';
 
-interface FridgeScreenProps {
-  items: FridgeItem[];
-  onAddItem: (item: Omit<FridgeItem, 'id' | 'addedDate'>) => void;
-  onRemoveItem: (id: string) => void;
-  onUpdateItem: (id: string, updates: Partial<FridgeItem>) => void;
-}
-
-export function FridgeScreen({ items, onAddItem, onRemoveItem }: FridgeScreenProps) {
+export function FridgeScreen() {
+  const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
+  const [items, setItems] = useState<UserItem[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const categories = ['All', ...Array.from(new Set(items.map(item => item.category)))];
+  // Load user items from Firebase
+  useEffect(() => {
+    if (user) {
+      loadItems();
+    }
+  }, [user]);
 
-  const getDaysUntilExpiry = (expiryDate: string): number => {
+  const loadItems = async () => {
+    try {
+      setLoading(true);
+      const userItems = await getUserItems(user!.uid);
+      setItems(userItems);
+    } catch (error) {
+      console.error('Error loading items:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRemoveItem = async (itemId: string) => {
+    try {
+      await deleteUserItem(itemId);
+      setItems(items.filter(item => item.user_items_id !== itemId));
+    } catch (error) {
+      console.error('Error removing item:', error);
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+    } catch (error) {
+      console.error('Error logging out:', error);
+    }
+  };
+
+  const categories = ['All', ...Array.from(new Set(items.map(item => 'General')))]; // Simplified for now
+
+  const getDaysUntilExpiry = (expiryDate: Date): number => {
     const today = new Date();
-    const expiry = new Date(expiryDate);
-    const diffTime = expiry.getTime() - today.getTime();
+    const diffTime = expiryDate.getTime() - today.getTime();
     return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   };
 
-  const getExpiryStatus = (expiryDate: string): 'expired' | 'warning' | 'good' => {
-    const days = getDaysUntilExpiry(expiryDate);
-    if (days < 0) return 'expired';
-    if (days <= 3) return 'warning';
-    return 'good';
-  };
-
   const filteredItems = items.filter(item => {
-    const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCategory = selectedCategory === 'All' || item.category === selectedCategory;
+    const matchesSearch = true; // Simplified for now
+    const matchesCategory = selectedCategory === 'All';
     return matchesSearch && matchesCategory;
   });
 
   const expiringItems = items.filter(item => {
-    const days = getDaysUntilExpiry(item.expiryDate);
-    return days >= 0 && days <= 3;
+    return item.user_items_status === 'expiring_soon';
   });
+
+  if (loading) {
+    return (
+      <div className="max-w-2xl mx-auto p-4 flex items-center justify-center min-h-screen">
+        <div className="text-gray-600 dark:text-gray-400">Loading your fridge...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-2xl mx-auto p-4">
-      <div className="mb-6">
-        <h1 className="text-gray-900 dark:text-white mb-2">My Fridge</h1>
-        <p className="text-gray-600 dark:text-gray-400">
-          {items.length} items stored
-        </p>
+      {/* User Info Header */}
+      <div className="mb-6 flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">My Fridge</h1>
+          <p className="text-gray-600 dark:text-gray-400">
+            {items.length} items stored
+          </p>
+        </div>
+        <div className="flex items-center gap-3">
+          <div className="text-right">
+            <p className="text-sm font-medium text-gray-900 dark:text-white">
+              {user?.displayName || 'User'}
+            </p>
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              {user?.email}
+            </p>
+          </div>
+          <button
+            onClick={handleLogout}
+            className="p-2 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors"
+          >
+            <User className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+          </button>
+        </div>
       </div>
 
+      {/* Expiring Items Alert */}
       {expiringItems.length > 0 && (
         <div className="mb-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
           <div className="flex items-start gap-3">
             <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 mt-0.5 flex-shrink-0" />
             <div>
-              <p className="text-red-900 dark:text-red-100">
+              <p className="text-red-900 dark:text-red-100 font-medium">
                 {expiringItems.length} item{expiringItems.length > 1 ? 's' : ''} expiring soon
               </p>
               <p className="text-sm text-red-700 dark:text-red-300 mt-1">
-                {expiringItems.map(item => item.name).join(', ')}
+                Check your fridge and use them before they expire!
               </p>
             </div>
           </div>
@@ -108,16 +162,16 @@ export function FridgeScreen({ items, onAddItem, onRemoveItem }: FridgeScreenPro
       {/* Items List */}
       <div className="space-y-3">
         {filteredItems.map(item => {
-          const status = getExpiryStatus(item.expiryDate);
-          const daysUntil = getDaysUntilExpiry(item.expiryDate);
+          const daysUntil = getDaysUntilExpiry(item.user_items_expiry_date);
+          const status = item.user_items_status;
 
           return (
             <div
-              key={item.id}
+              key={item.user_items_id}
               className={`p-4 rounded-lg border ${
                 status === 'expired'
                   ? 'bg-gray-100 dark:bg-gray-800 border-gray-300 dark:border-gray-600'
-                  : status === 'warning'
+                  : status === 'expiring_soon'
                   ? 'bg-red-50 dark:bg-red-900/20 border-red-300 dark:border-red-700'
                   : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700'
               }`}
@@ -125,20 +179,22 @@ export function FridgeScreen({ items, onAddItem, onRemoveItem }: FridgeScreenPro
               <div className="flex items-start justify-between">
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-1">
-                    <h3 className="text-gray-900 dark:text-white">{item.name}</h3>
-                    {status === 'warning' && (
+                    <h3 className="font-medium text-gray-900 dark:text-white">
+                      Item #{item.user_items_id.slice(0, 8)}
+                    </h3>
+                    {status === 'expiring_soon' && (
                       <div className="w-2 h-2 bg-red-500 rounded-full"></div>
                     )}
                   </div>
                   <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-                    {item.quantity} {item.unit} • {item.category}
+                    {item.user_items_quantity} {item.user_items_unit}
                   </p>
                   <div className="flex items-center gap-2">
                     <span
                       className={`text-xs px-2 py-1 rounded ${
                         status === 'expired'
                           ? 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
-                          : status === 'warning'
+                          : status === 'expiring_soon'
                           ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300'
                           : 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300'
                       }`}
@@ -154,7 +210,7 @@ export function FridgeScreen({ items, onAddItem, onRemoveItem }: FridgeScreenPro
                   </div>
                 </div>
                 <button
-                  onClick={() => onRemoveItem(item.id)}
+                  onClick={() => handleRemoveItem(item.user_items_id)}
                   className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
                 >
                   <Trash2 className="w-5 h-5 text-gray-500 dark:text-gray-400" />
@@ -166,7 +222,10 @@ export function FridgeScreen({ items, onAddItem, onRemoveItem }: FridgeScreenPro
 
         {filteredItems.length === 0 && (
           <div className="text-center py-12">
-            <p className="text-gray-500 dark:text-gray-400">No items found</p>
+            <p className="text-gray-500 dark:text-gray-400">No items in your fridge yet</p>
+            <p className="text-sm text-gray-400 dark:text-gray-500 mt-2">
+              Click "Add Item" to get started
+            </p>
           </div>
         )}
       </div>
@@ -174,7 +233,7 @@ export function FridgeScreen({ items, onAddItem, onRemoveItem }: FridgeScreenPro
       {showAddModal && (
         <AddItemModal
           onClose={() => setShowAddModal(false)}
-          onAdd={onAddItem}
+          onItemAdded={loadItems}
         />
       )}
     </div>

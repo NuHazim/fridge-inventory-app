@@ -1,18 +1,15 @@
-import { useState } from 'react';
-import { Mail, Lock, ChefHat } from 'lucide-react';
-import { useAuth } from './AuthProvider';
-import { Button } from './ui/button';
-import { Input } from './ui/input';
-import { Label } from './ui/label';
+import React, { useState } from 'react';
+import { Mail, Lock, User, Phone, ChefHat } from 'lucide-react';
+
 
 interface LoginScreenProps {
   onSwitchToSignUp: () => void;
 }
 
 export function LoginScreen({ onSwitchToSignUp }: LoginScreenProps) {
-  const { signIn, continueAsGuest } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
@@ -22,7 +19,20 @@ export function LoginScreen({ onSwitchToSignUp }: LoginScreenProps) {
     setIsLoading(true);
 
     try {
+      // ✅ Import signIn from services and call it
+      const { signIn } = await import('../services/auth.service');
+      
       await signIn(email, password);
+      
+      if (rememberMe) {
+        localStorage.setItem('rememberedEmail', email);
+      } else {
+        localStorage.removeItem('rememberedEmail');
+      }
+      
+      // ✅ Navigation happens automatically via AuthProvider
+      console.log('Login successful! Redirecting...');
+      
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to sign in');
     } finally {
@@ -33,7 +43,6 @@ export function LoginScreen({ onSwitchToSignUp }: LoginScreenProps) {
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#007057] to-[#005a45] flex items-center justify-center p-4">
       <div className="w-full max-w-md">
-        {/* Logo and Title */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-16 h-16 bg-white rounded-full mb-4">
             <ChefHat className="w-8 h-8 text-[#007057]" />
@@ -42,93 +51,76 @@ export function LoginScreen({ onSwitchToSignUp }: LoginScreenProps) {
           <p className="text-white/80">Track ingredients, reduce waste</p>
         </div>
 
-        {/* Login Form */}
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6">
-          <h2 className="text-2xl text-gray-900 dark:text-white mb-6">Welcome Back</h2>
+        <div className="bg-white rounded-2xl shadow-xl p-6">
+          <h2 className="text-2xl text-gray-900 mb-6">Welcome Back</h2>
           
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <label className="text-sm font-medium text-gray-700">Email</label>
               <div className="relative">
                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                <Input
-                  id="email"
+                <input
                   type="email"
                   placeholder="your@email.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="pl-10"
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#007057] focus:border-transparent"
                   required
                 />
               </div>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <label className="text-sm font-medium text-gray-700">Password</label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                <Input
-                  id="password"
+                <input
                   type="password"
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="pl-10"
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#007057] focus:border-transparent"
                   required
                 />
               </div>
             </div>
 
+            <div className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                id="rememberMe"
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
+                className="h-4 w-4 text-[#007057] border-gray-300 rounded"
+              />
+              <label htmlFor="rememberMe" className="text-sm text-gray-700">
+                Remember Me
+              </label>
+            </div>
+
             {error && (
-              <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3">
-                <p className="text-red-600 dark:text-red-400 text-sm">{error}</p>
+              <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                <p className="text-red-600 text-sm">{error}</p>
               </div>
             )}
 
-            <Button
+            <button
               type="submit"
-              className="w-full bg-[#007057] hover:bg-[#005a45] text-white"
+              className="w-full bg-[#007057] hover:bg-[#005a45] text-white py-2 px-4 rounded-lg font-medium transition-colors"
               disabled={isLoading}
             >
               {isLoading ? 'Signing in...' : 'Sign In'}
-            </Button>
+            </button>
           </form>
 
           <div className="mt-6 text-center">
-            <p className="text-gray-600 dark:text-gray-400">
+            <p className="text-gray-600">
               Don't have an account?{' '}
-              <button
-                onClick={onSwitchToSignUp}
-                className="text-[#007057] hover:underline"
-              >
+              <button onClick={onSwitchToSignUp} className="text-[#007057] hover:underline font-medium">
                 Sign Up
               </button>
             </p>
           </div>
-
-          <div className="mt-4">
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-300 dark:border-gray-600"></div>
-              </div>
-              <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-white dark:bg-gray-800 text-gray-500">Or</span>
-              </div>
-            </div>
-
-            <Button
-              onClick={continueAsGuest}
-              variant="outline"
-              className="w-full mt-4"
-            >
-              Continue as Guest
-            </Button>
-          </div>
-        </div>
-
-        {/* Demo Credentials */}
-        <div className="mt-4 text-center text-white/60 text-sm">
-          <p>No account required - try it as a guest first!</p>
         </div>
       </div>
     </div>

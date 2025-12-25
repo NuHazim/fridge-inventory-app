@@ -1,11 +1,13 @@
 import { useState } from 'react';
-import { X, Scan, Search, TrendingUp } from 'lucide-react';
-import { FridgeItem } from '../App';
+import { X, Scan, Search, TrendingUp, Loader2 } from 'lucide-react';
+import { useAuth } from './AuthProvider';
+import { createUserItem } from '../services/userItems.service';
+import { createItem } from '../services/itemMaster.service';
 import { BarcodeScannerModal } from './BarcodeScannerModal';
 
 interface AddItemModalProps {
   onClose: () => void;
-  onAdd: (item: Omit<FridgeItem, 'id' | 'addedDate'>) => void;
+  onItemAdded: () => void;
 }
 
 const SUGGESTED_ITEMS = [
@@ -23,10 +25,13 @@ const SUGGESTED_ITEMS = [
 
 type AddMethod = 'manual' | 'search' | 'suggestions';
 
-export function AddItemModal({ onClose, onAdd }: AddItemModalProps) {
+export function AddItemModal({ onClose, onItemAdded }: AddItemModalProps) {
+  const { user } = useAuth();
   const [method, setMethod] = useState<AddMethod>('suggestions');
   const [showScanner, setShowScanner] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
   const [formData, setFormData] = useState({
     name: '',
@@ -39,18 +44,44 @@ export function AddItemModal({ onClose, onAdd }: AddItemModalProps) {
   const categories = ['Dairy', 'Meat', 'Vegetables', 'Fruits', 'Bakery', 'Beverages', 'Other'];
   const units = ['pcs', 'g', 'kg', 'L', 'ml', 'oz', 'lb'];
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.name || !formData.expiryDate) return;
+    if (!formData.name || !formData.expiryDate || !user) return;
 
-    onAdd({
-      name: formData.name,
-      category: formData.category,
-      quantity: formData.quantity,
-      unit: formData.unit,
-      expiryDate: formData.expiryDate,
-    });
-    onClose();
+    setLoading(true);
+    setError('');
+
+    try {
+
+     
+      // Create item_master entry
+      const itemMasterId = await createItem({
+        item_code: `${formData.category.toUpperCase()}_${Date.now()}`,
+        item_name: formData.name,
+        item_category: formData.category,
+        item_default_shelf_life: 7,
+      });
+
+      console.log('Created item:', itemMasterId);
+
+
+
+      // Create user_item entry
+      await createUserItem(user.uid, {
+        item_id: itemMasterId,
+        user_items_quantity: formData.quantity,
+        user_items_unit: formData.unit,
+        user_items_expiry_date: new Date(formData.expiryDate),
+      });
+
+      onItemAdded();
+      onClose();
+    } catch (err) {
+      console.error('Error adding item:', err);
+      setError(err instanceof Error ? err.message : 'Failed to add item');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleSuggestedItemClick = (item: typeof SUGGESTED_ITEMS[0]) => {
@@ -93,6 +124,7 @@ export function AddItemModal({ onClose, onAdd }: AddItemModalProps) {
             <button
               onClick={onClose}
               className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+              disabled={loading}
             >
               <X className="w-5 h-5 text-gray-500 dark:text-gray-400" />
             </button>
@@ -198,6 +230,7 @@ export function AddItemModal({ onClose, onAdd }: AddItemModalProps) {
                   type="button"
                   onClick={() => setMethod('suggestions')}
                   className="text-blue-600 dark:text-blue-400 text-sm"
+                  disabled={loading}
                 >
                   ← Back
                 </button>
@@ -212,6 +245,7 @@ export function AddItemModal({ onClose, onAdd }: AddItemModalProps) {
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                     className="w-full px-4 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white"
                     required
+                    disabled={loading}
                   />
                 </div>
 
@@ -223,6 +257,7 @@ export function AddItemModal({ onClose, onAdd }: AddItemModalProps) {
                     value={formData.category}
                     onChange={(e) => setFormData({ ...formData, category: e.target.value })}
                     className="w-full px-4 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white"
+                    disabled={loading}
                   >
                     {categories.map(cat => (
                       <option key={cat} value={cat}>{cat}</option>
@@ -243,6 +278,7 @@ export function AddItemModal({ onClose, onAdd }: AddItemModalProps) {
                       min="0.1"
                       step="0.1"
                       required
+                      disabled={loading}
                     />
                   </div>
                   <div>
@@ -253,6 +289,7 @@ export function AddItemModal({ onClose, onAdd }: AddItemModalProps) {
                       value={formData.unit}
                       onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
                       className="w-full px-4 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white"
+                      disabled={loading}
                     >
                       {units.map(unit => (
                         <option key={unit} value={unit}>{unit}</option>
@@ -271,14 +308,29 @@ export function AddItemModal({ onClose, onAdd }: AddItemModalProps) {
                     onChange={(e) => setFormData({ ...formData, expiryDate: e.target.value })}
                     className="w-full px-4 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white"
                     required
+                    disabled={loading}
                   />
                 </div>
 
+                {error && (
+                  <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3">
+                    <p className="text-red-600 dark:text-red-400 text-sm">{error}</p>
+                  </div>
+                )}
+
                 <button
                   type="submit"
-                  className="w-full py-3 bg-[#007057] hover:bg-[#005a45] text-white rounded-lg transition-colors"
+                  className="w-full py-3 bg-[#007057] hover:bg-[#005a45] disabled:bg-gray-400 text-white rounded-lg transition-colors flex items-center justify-center gap-2"
+                  disabled={loading}
                 >
-                  Add to Fridge
+                  {loading ? (
+                    <>
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                      Adding...
+                    </>
+                  ) : (
+                    'Add to Fridge'
+                  )}
                 </button>
               </form>
             )}

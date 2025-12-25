@@ -1,18 +1,14 @@
-import { useState } from 'react';
-import { Mail, Lock, User, ChefHat } from 'lucide-react';
-import { useAuth } from './AuthProvider';
-import { Button } from './ui/button';
-import { Input } from './ui/input';
-import { Label } from './ui/label';
+import React, { useState } from 'react';
+import { Mail, Lock, User, Phone, ChefHat } from 'lucide-react';
 
 interface SignUpScreenProps {
   onSwitchToLogin: () => void;
 }
 
 export function SignUpScreen({ onSwitchToLogin }: SignUpScreenProps) {
-  const { signUp, continueAsGuest } = useAuth();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
@@ -22,13 +18,10 @@ export function SignUpScreen({ onSwitchToLogin }: SignUpScreenProps) {
     e.preventDefault();
     setError('');
 
-    // Validate passwords match
     if (password !== confirmPassword) {
       setError('Passwords do not match');
       return;
     }
-
-    // Validate password length
     if (password.length < 6) {
       setError('Password must be at least 6 characters');
       return;
@@ -37,7 +30,19 @@ export function SignUpScreen({ onSwitchToLogin }: SignUpScreenProps) {
     setIsLoading(true);
 
     try {
-      await signUp(email, password, name);
+      // ✅ Import signUp from services and call it
+      const { signUp } = await import('../services/auth.service');
+      
+      await signUp({
+        user_name: name,
+        user_email: email,
+        user_password: password,
+      });
+      
+      // ✅ Navigation happens automatically via AuthProvider
+      // When user is created, onAuthChange triggers and App.tsx shows MainApp
+      console.log('Sign up successful! Redirecting...');
+      
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to sign up');
     } finally {
@@ -48,7 +53,6 @@ export function SignUpScreen({ onSwitchToLogin }: SignUpScreenProps) {
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#007057] to-[#005a45] flex items-center justify-center p-4">
       <div className="w-full max-w-md">
-        {/* Logo and Title */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-16 h-16 bg-white rounded-full mb-4">
             <ChefHat className="w-8 h-8 text-[#007057]" />
@@ -57,119 +61,107 @@ export function SignUpScreen({ onSwitchToLogin }: SignUpScreenProps) {
           <p className="text-white/80">Track ingredients, reduce waste</p>
         </div>
 
-        {/* Sign Up Form */}
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6">
-          <h2 className="text-2xl text-gray-900 dark:text-white mb-6">Create Account</h2>
+        <div className="bg-white rounded-2xl shadow-xl p-6">
+          <h2 className="text-2xl text-gray-900 mb-6">Create Account</h2>
           
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="name">Full Name</Label>
+              <label className="text-sm font-medium text-gray-700">Full Name</label>
               <div className="relative">
                 <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                <Input
-                  id="name"
+                <input
                   type="text"
                   placeholder="John Doe"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className="pl-10"
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#007057] focus:border-transparent"
                   required
                 />
               </div>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <label className="text-sm font-medium text-gray-700">Email</label>
               <div className="relative">
                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                <Input
-                  id="email"
+                <input
                   type="email"
                   placeholder="your@email.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="pl-10"
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#007057] focus:border-transparent"
                   required
                 />
               </div>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <label className="text-sm font-medium text-gray-700">Phone Number</label>
+              <div className="relative">
+                <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <input
+                  type="tel"
+                  placeholder="+60123456789"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#007057] focus:border-transparent"
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-700">Password</label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                <Input
-                  id="password"
+                <input
                   type="password"
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="pl-10"
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#007057] focus:border-transparent"
                   required
                 />
               </div>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="confirmPassword">Confirm Password</Label>
+              <label className="text-sm font-medium text-gray-700">Confirm Password</label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                <Input
-                  id="confirmPassword"
+                <input
                   type="password"
                   placeholder="••••••••"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="pl-10"
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#007057] focus:border-transparent"
                   required
                 />
               </div>
             </div>
 
             {error && (
-              <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3">
-                <p className="text-red-600 dark:text-red-400 text-sm">{error}</p>
+              <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                <p className="text-red-600 text-sm">{error}</p>
               </div>
             )}
 
-            <Button
+            <button
               type="submit"
-              className="w-full bg-[#007057] hover:bg-[#005a45] text-white"
+              className="w-full bg-[#007057] hover:bg-[#005a45] text-white py-2 px-4 rounded-lg font-medium transition-colors"
               disabled={isLoading}
             >
               {isLoading ? 'Creating account...' : 'Sign Up'}
-            </Button>
+            </button>
           </form>
 
           <div className="mt-6 text-center">
-            <p className="text-gray-600 dark:text-gray-400">
+            <p className="text-gray-600">
               Already have an account?{' '}
-              <button
-                onClick={onSwitchToLogin}
-                className="text-[#007057] hover:underline"
-              >
+              <button onClick={onSwitchToLogin} className="text-[#007057] hover:underline font-medium">
                 Sign In
               </button>
             </p>
-          </div>
-
-          <div className="mt-4">
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-300 dark:border-gray-600"></div>
-              </div>
-              <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-white dark:bg-gray-800 text-gray-500">Or</span>
-              </div>
-            </div>
-
-            <Button
-              onClick={continueAsGuest}
-              variant="outline"
-              className="w-full mt-4"
-            >
-              Continue as Guest
-            </Button>
           </div>
         </div>
       </div>
