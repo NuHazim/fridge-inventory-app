@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Home, ShoppingCart, ChefHat, Settings } from 'lucide-react';
 import { FridgeScreen } from './components/FridgeScreen';
 import { GroceryScreen } from './components/GroceryScreen';
+import { RecipesScreen } from './components/RecipesScreen';
 import { SettingsScreen } from './components/SettingsScreen';
 import { ThemeProvider } from './components/ThemeProvider';
 import { AuthProvider, useAuth } from './components/AuthProvider';
@@ -44,19 +45,7 @@ function MainApp() {
       case 'grocery':
         return <GroceryScreen />;
       case 'recipes':
-        return (
-          <div className="max-w-2xl mx-auto p-4 min-h-screen flex items-center justify-center">
-            <div className="text-center">
-              <ChefHat className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
-                Recipes
-              </h2>
-              <p className="text-gray-600 dark:text-gray-400">
-                Coming soon! Find recipes based on your fridge items.
-              </p>
-            </div>
-          </div>
-        );
+        return <RecipesScreen />;
       case 'settings':
         return <SettingsScreen />;
       default:
