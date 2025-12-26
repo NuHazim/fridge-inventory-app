@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Plus, Trash2, Check, Sparkles, Loader2 } from 'lucide-react';
 import { useAuth } from './AuthProvider';
+import { createUserItem } from '../services/userItems.service';
+import { createItem } from '../services/itemMaster.service';
 import { 
   collection, 
   addDoc, 
@@ -132,23 +134,78 @@ export function GroceryScreen() {
     }
   };
 
-  const handleCompletePurchase = async () => {
-    try {
-      const completedItems = items.filter(item => item.completed);
-      
-      // Delete all completed items
-      await Promise.all(
-        completedItems.map(item => deleteDoc(doc(db, 'grocery_items', item.id)))
-      );
-      
-      // Optionally: Add these items to user_items (fridge)
-      // You can implement this by calling createUserItem for each completed item
-      
-      await loadItems();
-    } catch (error) {
-      console.error('Error completing purchase:', error);
+  
+
+// Replace the handleCompletePurchase function with this:
+const handleCompletePurchase = async () => {
+  if (!user) return;
+  
+  try {
+    setLoading(true);
+    const completedItems = items.filter(item => item.completed);
+    
+    // Step 1: Add completed items to fridge (user_items)
+    for (const groceryItem of completedItems) {
+      try {
+        // Create item_master entry
+        const itemMasterId = await createItem({
+          item_code: `${groceryItem.category.toUpperCase()}_${Date.now()}`,
+          item_name: groceryItem.name,
+          item_category: groceryItem.category,
+          item_default_shelf_life: getDefaultShelfLife(groceryItem.category),
+        });
+
+        // Calculate default expiry date based on category
+        const expiryDate = new Date();
+        expiryDate.setDate(expiryDate.getDate() + getDefaultShelfLife(groceryItem.category));
+
+        // Create user_item entry (add to fridge)
+        await createUserItem(user.uid, {
+          item_id: itemMasterId,
+          user_items_name: groceryItem.name,
+          user_items_quantity: groceryItem.quantity,
+          user_items_unit: groceryItem.unit,
+          user_items_expiry_date: expiryDate,
+        });
+
+        console.log(`Added ${groceryItem.name} to fridge`);
+      } catch (error) {
+        console.error(`Error adding ${groceryItem.name} to fridge:`, error);
+      }
     }
+
+    // Step 2: Delete all completed items from grocery list
+    await Promise.all(
+      completedItems.map(item => deleteDoc(doc(db, 'grocery_items', item.id)))
+    );
+
+    // Step 3: Reload grocery list
+    await loadItems();
+
+    // Show success message
+    alert(`✅ ${completedItems.length} item(s) added to fridge!`);
+  } catch (error) {
+    console.error('Error completing purchase:', error);
+    alert('Failed to complete purchase. Please try again.');
+  } finally {
+    setLoading(false);
+  }
+};
+
+const getDefaultShelfLife = (category: string): number => {
+  const shelfLifeMap: Record<string, number> = {
+    'Dairy': 7,
+    'Meat': 3,
+    'Vegetables': 5,
+    'Fruits': 7,
+    'Bakery': 5,
+    'Beverages': 30,
+    'Grains': 180,
+    'Other': 7,
   };
+  return shelfLifeMap[category] || 7; // Default 7 days
+};
+
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

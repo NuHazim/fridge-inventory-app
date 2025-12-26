@@ -180,7 +180,7 @@ export function FridgeScreen() {
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-1">
                     <h3 className="font-medium text-gray-900 dark:text-white">
-                      Item #{item.user_items_id.slice(0, 8)}
+                      Item : {item.user_items_name}
                     </h3>
                     {status === 'expiring_soon' && (
                       <div className="w-2 h-2 bg-red-500 rounded-full"></div>

@@ -65,10 +65,10 @@ export function AddItemModal({ onClose, onItemAdded }: AddItemModalProps) {
       console.log('Created item:', itemMasterId);
 
 
-
       // Create user_item entry
       await createUserItem(user.uid, {
         item_id: itemMasterId,
+        user_items_name: formData.name,
         user_items_quantity: formData.quantity,
         user_items_unit: formData.unit,
         user_items_expiry_date: new Date(formData.expiryDate),

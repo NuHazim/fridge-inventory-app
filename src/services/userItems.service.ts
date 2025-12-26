@@ -39,7 +39,8 @@ import {
         user_items_unit: itemData.user_items_unit,
         user_items_expiry_date: Timestamp.fromDate(itemData.user_items_expiry_date),
         user_items_added_at: serverTimestamp(),
-        user_items_status: status
+        user_items_status: status,
+        user_items_name: itemData.user_items_name
       });
       return docRef.id;
     } catch (error: any) {
@@ -63,7 +64,8 @@ import {
           user_items_unit: data.user_items_unit,
           user_items_expiry_date: data.user_items_expiry_date?.toDate(),
           user_items_added_at: data.user_items_added_at?.toDate(),
-          user_items_status: data.user_items_status
+          user_items_status: data.user_items_status,
+          user_items_name: data.user_items_name
         } as UserItem;
       }
       return null;
@@ -92,7 +94,8 @@ import {
           user_items_unit: data.user_items_unit,
           user_items_expiry_date: data.user_items_expiry_date?.toDate(),
           user_items_added_at: data.user_items_added_at?.toDate(),
-          user_items_status: data.user_items_status
+          user_items_status: data.user_items_status,
+          user_items_name: data.user_items_name
         } as UserItem;
       });
     } catch (error: any) {
@@ -124,7 +127,8 @@ import {
           user_items_unit: data.user_items_unit,
           user_items_expiry_date: data.user_items_expiry_date?.toDate(),
           user_items_added_at: data.user_items_added_at?.toDate(),
-          user_items_status: data.user_items_status
+          user_items_status: data.user_items_status,
+          user_items_name: data.user_items_name
         } as UserItem;
       });
     } catch (error: any) {
