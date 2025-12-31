@@ -98,18 +98,28 @@ export function AddItemModal({ onClose, onItemAdded }: AddItemModalProps) {
     setMethod('manual');
   };
 
-  const handleBarcodeResult = (barcode: string, productName: string) => {
+  const handleBarcodeResult = (data: {
+    barcode: string;
+    name: string;
+    category: string;
+    unit: string;
+    }) => {
     const defaultExpiry = new Date();
     defaultExpiry.setDate(defaultExpiry.getDate() + 7);
     
+    
     setFormData({
-      ...formData,
-      name: productName,
-      expiryDate: defaultExpiry.toISOString().split('T')[0],
+    name: data.name,
+    category: data.category,
+    quantity: 1,
+    unit: data.unit,
+    expiryDate: defaultExpiry.toISOString().split('T')[0],
     });
+    
+    
     setShowScanner(false);
     setMethod('manual');
-  };
+    };
 
   const filteredSuggestions = SUGGESTED_ITEMS.filter(item =>
     item.name.toLowerCase().includes(searchQuery.toLowerCase())
@@ -339,11 +349,11 @@ export function AddItemModal({ onClose, onItemAdded }: AddItemModalProps) {
       </div>
 
       {showScanner && (
-        <BarcodeScannerModal
-          onClose={() => setShowScanner(false)}
-          onResult={handleBarcodeResult}
-        />
-      )}
+<BarcodeScannerModal
+onClose={() => setShowScanner(false)}
+onResult={handleBarcodeResult}
+/>
+)}
     </>
   );
 }
